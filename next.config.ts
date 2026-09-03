@@ -1,6 +1,11 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yxljwllvzyndvlvwlxbg.supabase.co',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bGp3bGx2enluZHZsdndseGJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODE5NTYsImV4cCI6MjEwMzg1Nzk1Nn0.4dtak_OU0ue3i7LObJPLdGbMeVFtS8Uj6pas0xG5-t0',
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BM6YDyjabYvfCWcww-NmHJek2tilNS8bWsFoLAtjuxouss7ppUz8Nak12v8Yxcc_xpDYrnBju3sBth63MzStQcY',
+  },
   turbopack: {},
   reactStrictMode: true,
   compress: true,
