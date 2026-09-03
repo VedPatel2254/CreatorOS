@@ -32,15 +32,21 @@ export function useUpdateSettings() {
 
   return useMutation({
     mutationFn: async (data: Partial<UserSettings>) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) throw new Error(authError?.message || 'Not authenticated')
 
-      const { error } = await supabase
+      const { data: result, error } = await supabase
         .from('user_settings')
         .update(data)
         .eq('user_id', user.id)
+        .select()
+        .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Settings update error:', error)
+        throw error
+      }
+      return result
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] })

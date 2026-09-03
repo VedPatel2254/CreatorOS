@@ -73,13 +73,21 @@ export default function SettingsPage() {
   })
 
   const handleSaveProfile = async (data: ProfileFormValues) => {
-    await updateSettings.mutateAsync(data)
-    toast.success('Profile updated')
+    try {
+      await updateSettings.mutateAsync(data)
+      toast.success('Profile updated')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update profile')
+    }
   }
 
   const handleSaveInvoice = async (data: InvoiceFormValues) => {
-    await updateSettings.mutateAsync(data)
-    toast.success('Invoice settings updated')
+    try {
+      await updateSettings.mutateAsync(data)
+      toast.success('Invoice settings updated')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update invoice settings')
+    }
   }
 
   const handleAddWorkType = async () => {
