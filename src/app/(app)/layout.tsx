@@ -12,8 +12,16 @@ import { QuickAddFAB } from '@/components/layout/QuickAddFAB'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let user: any = null
+
+  try {
+    const supabase = await createClient()
+    const { data: { user: u } } = await supabase.auth.getUser()
+    user = u
+  } catch {
+    redirect('/auth/login')
+  }
+
   if (!user) { redirect('/auth/login') }
 
   return (
