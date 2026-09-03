@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yxljwllvzyndvlvwlxbg.supabase.co',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bGp3bGx2enluZHZsdndseGJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyODE5NTYsImV4cCI6MjEwMzg1Nzk1Nn0.4dtak_OU0ue3i7LObJPLdGbMeVFtS8Uj6pas0xG5-t0',
-    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BDza5sZKYXazKTDkC5ww25entECyQfiMdFFODMOdOa5o0GJnCCoWVO0Zec-p2JNCYss5DgfwE80SVZ2SaRxmXYI',
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BIDzdgpwYHucKornHKAtvmWS9XQRvMDykRD5Ky32nHcsPFQD1g8UaobBdwmCtxcegta3rv3sCsX74rLw3D-boqw',
   },
   turbopack: {},
   reactStrictMode: true,
