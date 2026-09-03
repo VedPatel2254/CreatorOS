@@ -45,7 +45,7 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null
   try {
     const registration = await navigator.serviceWorker.ready
-    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BIDzdgpwYHucKornHKAtvmWS9XQRvMDykRD5Ky32nHcsPFQD1g8UaobBdwmCtxcegta3rv3sCsX74rLw3D-boqw'
+    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BJ8Rx4hZ2psCqjvFlXcI6_YaaLpgzshci8Z3KTLPuA1O-HtY0fH0e4NsW99OotQ1r54h69cN9wBNDg-Vxqqi5gQ'
     if (!publicKey) throw new Error('VAPID public key not configured')
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
