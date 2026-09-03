@@ -50,6 +50,8 @@ export default function SettingsPage() {
 
   const [showAddWorkType, setShowAddWorkType] = useState(false)
   const [newWorkType, setNewWorkType] = useState('')
+  const [showBulkImport, setShowBulkImport] = useState(false)
+  const [bulkImportText, setBulkImportText] = useState('')
   const [editingWorkType, setEditingWorkType] = useState<{ id: string; name: string } | null>(null)
 
   const profileForm = useForm<ProfileFormValues>({
@@ -102,6 +104,43 @@ export default function SettingsPage() {
     await updateWorkType.mutateAsync({ id: editingWorkType.id, name: editingWorkType.name.trim() })
     setEditingWorkType(null)
     toast.success('Work type updated')
+  }
+
+  const handleBulkImport = async () => {
+    const names = bulkImportText
+      .split(/[,\n]/)
+      .map(n => n.trim())
+      .filter(n => n.length > 0)
+
+    if (names.length === 0) return
+
+    const existingNames = new Set(workTypes.map(wt => wt.name.toLowerCase()))
+    const newNames = names.filter(n => !existingNames.has(n.toLowerCase()))
+    const duplicates = names.filter(n => existingNames.has(n.toLowerCase()))
+
+    if (newNames.length === 0) {
+      toast.warning('All work types already exist')
+      setShowBulkImport(false)
+      setBulkImportText('')
+      return
+    }
+
+    let added = 0
+    for (const name of newNames) {
+      try {
+        await addWorkType.mutateAsync(name)
+        added++
+      } catch {}
+    }
+
+    if (duplicates.length > 0) {
+      toast.info(`Added ${added} work type(s), skipped ${duplicates.length} duplicate(s)`)
+    } else {
+      toast.success(`Added ${added} work type(s)`)
+    }
+
+    setShowBulkImport(false)
+    setBulkImportText('')
   }
 
   if (isLoading) {
@@ -181,9 +220,14 @@ export default function SettingsPage() {
                 <CardTitle className="text-slate-50">Work Types</CardTitle>
                 <CardDescription className="text-slate-400">Manage your service categories</CardDescription>
               </div>
-              <Button onClick={() => setShowAddWorkType(true)} size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
-                <Plus className="mr-2 h-4 w-4" />Add
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={() => setShowBulkImport(true)} size="sm" variant="outline" className="border-slate-700 text-slate-300">
+                  Bulk Add
+                </Button>
+                <Button onClick={() => setShowAddWorkType(true)} size="sm" className="bg-violet-600 hover:bg-violet-700 text-white">
+                  <Plus className="mr-2 h-4 w-4" />Add
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -283,6 +327,30 @@ export default function SettingsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingWorkType(null)} className="border-slate-700 text-slate-300">Cancel</Button>
             <Button onClick={handleUpdateWorkType} className="bg-violet-600 hover:bg-violet-700 text-white">Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Import Work Types Dialog */}
+      <Dialog open={showBulkImport} onOpenChange={setShowBulkImport}>
+        <DialogContent className="bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-slate-50">Bulk Add Work Types</DialogTitle>
+            <CardDescription className="text-slate-400">Separate each work type with a comma or new line</CardDescription>
+          </DialogHeader>
+          <Textarea
+            value={bulkImportText}
+            onChange={(e) => setBulkImportText(e.target.value)}
+            placeholder={"Instagram Reel, YouTube Video, Blog Post\nSocial Media Post, Email Newsletter"}
+            className="bg-slate-800 border-slate-700 text-slate-50 min-h-[150px]"
+            aria-label="Bulk work types input"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowBulkImport(false); setBulkImportText('') }} className="border-slate-700 text-slate-300">Cancel</Button>
+            <Button onClick={handleBulkImport} disabled={!bulkImportText.trim()} className="bg-violet-600 hover:bg-violet-700 text-white">
+              {addWorkType.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Add All
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
