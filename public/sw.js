@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'creatoros-static-v2'
-const DYNAMIC_CACHE = 'creatoros-dynamic-v2'
+const STATIC_CACHE = 'creatoros-static-v3'
+const DYNAMIC_CACHE = 'creatoros-dynamic-v3'
 
 const PRECACHE_ASSETS = ['/', '/dashboard', '/offline', '/manifest.json']
 
