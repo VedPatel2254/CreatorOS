@@ -1,6 +1,16 @@
 // Client-side push subscription utilities
 // No server-only imports here
 
+let cachedVapidKey: string | null = null
+
+async function getVapidKey(): Promise<string> {
+  if (cachedVapidKey) return cachedVapidKey
+  const res = await fetch('/api/config')
+  const config = await res.json()
+  cachedVapidKey = config.vapidPublicKey
+  return cachedVapidKey
+}
+
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -45,7 +55,7 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null
   try {
     const registration = await navigator.serviceWorker.ready
-    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BJ8Rx4hZ2psCqjvFlXcI6_YaaLpgzshci8Z3KTLPuA1O-HtY0fH0e4NsW99OotQ1r54h69cN9wBNDg-Vxqqi5gQ'
+    const publicKey = await getVapidKey()
     if (!publicKey) throw new Error('VAPID public key not configured')
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
