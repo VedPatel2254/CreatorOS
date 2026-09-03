@@ -37,8 +37,7 @@ export function useUpdateSettings() {
 
       const { data: result, error } = await supabase
         .from('user_settings')
-        .update(data)
-        .eq('user_id', user.id)
+        .upsert({ ...data, user_id: user.id }, { onConflict: 'user_id' })
         .select()
         .single()
 
