@@ -1,14 +1,20 @@
 import 'server-only'
-import * as pdfParseModule from 'pdf-parse'
 import { ExtractedRow, ExtractedRaw } from '@/types'
 import { v4 as uuidv4 } from 'uuid'
-
-const pdfParse = (pdfParseModule as any).default || pdfParseModule
 
 export async function extractPdfContent(
   buffer: Buffer,
   workTypes: Array<{ id: string; name: string }>
 ): Promise<ExtractedRaw> {
+  let pdfParse: (buf: Buffer) => Promise<{ text: string; numpages: number }>
+
+  try {
+    const mod = await import('pdf-parse')
+    pdfParse = (mod as any).default || mod
+  } catch (error) {
+    throw new Error(`PDF library failed to load: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+
   let pdfData: { text: string; numpages: number }
 
   try {

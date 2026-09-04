@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, FileText, Loader2, Upload } from 'lucide-react'
+import { ArrowLeft, FileSpreadsheet, FileText, Loader2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +15,8 @@ interface UploadStepProps {
   onRetry: () => void
 }
 
+const ACCEPTED = '.pdf,.xlsx,.xls'
+
 export function UploadStep({ clientName, clientId, onUpload, isProcessing, error, onRetry }: UploadStepProps) {
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -23,8 +25,9 @@ export function UploadStep({ clientName, clientId, onUpload, isProcessing, error
   const [validationError, setValidationError] = useState<string | null>(null)
 
   const validateFile = useCallback((file: File): string | null => {
-    if (file.type !== 'application/pdf') {
-      return 'Only PDF files are accepted.'
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    if (ext !== 'pdf' && ext !== 'xlsx' && ext !== 'xls') {
+      return 'Only PDF and Excel files (.pdf, .xlsx, .xls) are accepted.'
     }
     if (file.size > 10 * 1024 * 1024) {
       return 'File size must be under 10MB.'
@@ -60,6 +63,8 @@ export function UploadStep({ clientName, clientId, onUpload, isProcessing, error
     setIsDragging(false)
   }, [])
 
+  const FileIcon = selectedFile?.name.endsWith('.pdf') ? FileText : FileSpreadsheet
+
   if (isProcessing) {
     return (
       <div className="max-w-2xl mx-auto">
@@ -70,12 +75,12 @@ export function UploadStep({ clientName, clientId, onUpload, isProcessing, error
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-12 w-12 text-violet-500 animate-spin" />
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-200">✓ Uploading PDF...</p>
+              <p className="text-sm font-medium text-slate-200">✓ Uploading file...</p>
               <p className="text-sm text-slate-400">⏳ Extracting content...</p>
             </div>
             {selectedFile && (
               <div className="flex items-center gap-2 text-sm text-slate-400 mt-4">
-                <FileText className="h-4 w-4" />
+                <FileIcon className="h-4 w-4" />
                 <span>{selectedFile.name}</span>
               </div>
             )}
@@ -122,7 +127,7 @@ export function UploadStep({ clientName, clientId, onUpload, isProcessing, error
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,application/pdf"
+          accept={ACCEPTED}
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0]
@@ -131,17 +136,18 @@ export function UploadStep({ clientName, clientId, onUpload, isProcessing, error
         />
         <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
         <p className="text-lg font-medium text-slate-300">
-          Drop PDF here or click to browse
+          Drop file here or click to browse
         </p>
         <p className="text-sm text-slate-500 mt-2">
-          Accepts PDF files up to 10MB
+          Accepts PDF and Excel files (.pdf, .xlsx, .xls) up to 10MB
         </p>
       </div>
 
       <div className="mt-8 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50">
         <p className="text-sm font-medium text-slate-300 mb-2">Tips for best results:</p>
         <ul className="text-sm text-slate-400 space-y-1">
-          <li>• Use text-based PDFs (not scanned)</li>
+          <li>• Excel files: use column headers like Date, Title, Platform, Type</li>
+          <li>• PDF: use text-based PDFs (not scanned)</li>
           <li>• Tables extract better than lists</li>
           <li>• Always review before importing</li>
         </ul>

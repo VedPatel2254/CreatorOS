@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { extractPdfContent } from '@/lib/server/pdf-extractor'
+import { extractExcelContent } from '@/lib/server/excel-extractor'
 
 export const maxDuration = 30
+
+const ACCEPTED_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'application/octet-stream',
+]
+
+const ACCEPTED_EXTENSIONS = ['.pdf', '.xlsx', '.xls']
+
+function isAcceptedFile(file: File): boolean {
+  const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+  return ACCEPTED_TYPES.includes(file.type) || ACCEPTED_EXTENSIONS.includes(ext)
+}
+
+function isExcel(file: File): boolean {
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  return ext === 'xlsx' || ext === 'xls' ||
+    file.type.includes('spreadsheet') || file.type.includes('excel')
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,9 +44,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'client_id is required' }, { status: 400 })
     }
 
-    if (file.type !== 'application/pdf') {
+    if (!isAcceptedFile(file)) {
       return NextResponse.json(
-        { error: 'Only PDF files are accepted' },
+        { error: 'Only PDF and Excel files (.pdf, .xlsx, .xls) are accepted' },
         { status: 400 }
       )
     }
@@ -62,7 +83,7 @@ export async function POST(request: NextRequest) {
     const { error: uploadError } = await supabase.storage
       .from('imports')
       .upload(storagePath, buffer, {
-        contentType: 'application/pdf',
+        contentType: file.type || 'application/octet-stream',
         upsert: false,
       })
 
@@ -70,9 +91,12 @@ export async function POST(request: NextRequest) {
       console.error('Storage upload error:', uploadError)
     }
 
-    const extractedRaw = await extractPdfContent(buffer, workTypes ?? [])
+    const useExcel = isExcel(file)
+    const extractedRaw = useExcel
+      ? await extractExcelContent(buffer, workTypes ?? [])
+      : await extractPdfContent(buffer, workTypes ?? [])
 
-    const isImageBased = extractedRaw.metadata.extraction_method === 'ocr_unavailable'
+    const isImageBased = !useExcel && extractedRaw.metadata.extraction_method === 'ocr_unavailable'
     const confidence = isImageBased
       ? 'failed'
       : extractedRaw.rows.length === 0
