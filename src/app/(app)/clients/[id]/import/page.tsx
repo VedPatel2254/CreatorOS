@@ -39,7 +39,13 @@ export default function ImportPage({ params }: { params: Promise<{ id: string }>
         body: formData,
       })
 
-      const data = await response.json()
+      const text = await response.text()
+      let data: any
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error(`Server error (${response.status}): ${text.substring(0, 200)}`)
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'Upload failed')
@@ -81,7 +87,7 @@ export default function ImportPage({ params }: { params: Promise<{ id: string }>
 
     setStep('confirming')
 
-    const response = await fetch('/api/import/confirm', {
+    const confirmResponse = await fetch('/api/import/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -91,9 +97,15 @@ export default function ImportPage({ params }: { params: Promise<{ id: string }>
       }),
     })
 
-    const data = await response.json()
+    const confirmText = await confirmResponse.text()
+    let data: any
+    try {
+      data = JSON.parse(confirmText)
+    } catch {
+      throw new Error(`Server error (${confirmResponse.status}): ${confirmText.substring(0, 200)}`)
+    }
 
-    if (!response.ok) {
+    if (!confirmResponse.ok) {
       throw new Error(data.error || 'Confirmation failed')
     }
 
