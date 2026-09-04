@@ -8,7 +8,7 @@ async function getVapidKey(): Promise<string> {
   const res = await fetch('/api/config')
   const config = await res.json()
   cachedVapidKey = config.vapidPublicKey
-  return cachedVapidKey
+  return cachedVapidKey!
 }
 
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
