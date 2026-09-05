@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
@@ -13,13 +13,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { useCreateTask, useUpdateTask } from '@/hooks/useTasks'
+import { useCreateTask, useCreateTasks, useUpdateTask } from '@/hooks/useTasks'
 import { useClients } from '@/hooks/useClients'
 import { useWorkTypes } from '@/hooks/useSettings'
 import { taskSchema, TaskFormValues } from '@/lib/validations/task'
 import { resolveExpectedPrice } from '@/lib/billing-utils'
 import { formatCurrency } from '@/lib/utils'
 import { TaskWithRelations, Client, ClientPricingRuleWithWorkType } from '@/types'
+import { MultiDatePicker } from './MultiDatePicker'
 
 interface TaskSheetProps {
   open: boolean
@@ -30,6 +31,7 @@ interface TaskSheetProps {
 
 export function TaskSheet({ open, onOpenChange, task, defaultClientId }: TaskSheetProps) {
   const createTask = useCreateTask()
+  const createTasks = useCreateTasks()
   const updateTask = useUpdateTask()
   const { data: clients = [] } = useClients()
   const { data: workTypes = [] } = useWorkTypes()
@@ -37,6 +39,9 @@ export function TaskSheet({ open, onOpenChange, task, defaultClientId }: TaskShe
 
   const activeClients = clients.filter((c) => c.status === 'active')
   const activeWorkTypes = workTypes.filter((w) => w.is_active)
+
+  const [selectedDates, setSelectedDates] = useState<string[]>([])
+  const [selectedTime, setSelectedTime] = useState('09:00')
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema) as any,
@@ -81,6 +86,8 @@ export function TaskSheet({ open, onOpenChange, task, defaultClientId }: TaskShe
         billing_notes: task.billing_notes ?? '',
         notes: task.notes ?? '',
       })
+      setSelectedDates([])
+      setSelectedTime('09:00')
     } else if (open) {
       reset({
         client_id: defaultClientId ?? '',
@@ -88,6 +95,8 @@ export function TaskSheet({ open, onOpenChange, task, defaultClientId }: TaskShe
         deadline: '', is_billable: true, billing_quantity: 1,
         effective_unit_price: null, billing_notes: '', notes: '',
       })
+      setSelectedDates([])
+      setSelectedTime('09:00')
     }
   }, [open, task, defaultClientId, reset])
 
@@ -103,11 +112,31 @@ export function TaskSheet({ open, onOpenChange, task, defaultClientId }: TaskShe
         await updateTask.mutateAsync({ id: task.id, ...data })
         toast.success('Task updated')
       } else {
-        await createTask.mutateAsync({
+        const datesToUse = selectedDates.length > 0
+          ? selectedDates
+          : data.deadline ? [data.deadline] : []
+
+        if (datesToUse.length === 0) {
+          toast.error('Please select at least one delivery date')
+          return
+        }
+
+        const payload = {
           ...data,
           effective_unit_price: data.effective_unit_price ?? resolvedPrice,
-        })
-        toast.success('Task created')
+        }
+
+        if (datesToUse.length === 1) {
+          await createTask.mutateAsync({ ...payload, deadline: datesToUse[0] })
+          toast.success('Task created')
+        } else {
+          const tasks = datesToUse.map((date) => ({
+            ...payload,
+            deadline: date.includes('T') ? date : `${date}T${selectedTime}:00`,
+          }))
+          await createTasks.mutateAsync(tasks)
+          toast.success(`${tasks.length} tasks created`)
+        }
       }
       onOpenChange(false)
     } catch {
@@ -115,7 +144,7 @@ export function TaskSheet({ open, onOpenChange, task, defaultClientId }: TaskShe
     }
   }
 
-  const isPending = createTask.isPending || updateTask.isPending
+  const isPending = createTask.isPending || createTasks.isPending || updateTask.isPending
 
   const selectedClientForBilling = activeClients.find((c) => c.id === selectedClientId)
   const billingType = selectedClientForBilling?.billing_type
@@ -158,27 +187,35 @@ export function TaskSheet({ open, onOpenChange, task, defaultClientId }: TaskShe
               {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-slate-300">Work Type *</Label>
-                <Select value={selectedWorkTypeId} onValueChange={(v) => setValue('work_type_id', v)}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-50">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    {activeWorkTypes.map((w) => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.work_type_id && <p className="text-sm text-red-500">{errors.work_type_id.message}</p>}
-              </div>
+            <div className="space-y-2">
+              <Label className="text-slate-300">Work Type *</Label>
+              <Select value={selectedWorkTypeId} onValueChange={(v) => setValue('work_type_id', v)}>
+                <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-50">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  {activeWorkTypes.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.work_type_id && <p className="text-sm text-red-500">{errors.work_type_id.message}</p>}
+            </div>
+
+            {isEditing ? (
               <div className="space-y-2">
                 <Label className="text-slate-300">Deadline *</Label>
                 <Input {...register('deadline')} type="datetime-local" className="bg-slate-800 border-slate-700 text-slate-50" />
                 {errors.deadline && <p className="text-sm text-red-500">{errors.deadline.message}</p>}
               </div>
-            </div>
+            ) : (
+              <MultiDatePicker
+                selectedDates={selectedDates}
+                onDatesChange={setSelectedDates}
+                time={selectedTime}
+                onTimeChange={setSelectedTime}
+              />
+            )}
 
             <div className="space-y-2">
               <Label className="text-slate-300">Platform</Label>
@@ -246,6 +283,12 @@ export function TaskSheet({ open, onOpenChange, task, defaultClientId }: TaskShe
                       <span className="text-slate-400">Estimated Amount</span>
                       <span className="text-slate-50 font-medium">{formatCurrency(totalAmount)}</span>
                     </div>
+                    {selectedDates.length > 1 && (
+                      <div className="flex justify-between text-sm mt-1">
+                        <span className="text-slate-400">Total ({selectedDates.length}x)</span>
+                        <span className="text-slate-50 font-medium">{formatCurrency(totalAmount * selectedDates.length)}</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -263,7 +306,7 @@ export function TaskSheet({ open, onOpenChange, task, defaultClientId }: TaskShe
             </Button>
             <Button type="submit" disabled={isPending} className="bg-violet-600 hover:bg-violet-700 text-white">
               {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              {isEditing ? 'Update Task' : 'Create Task'}
+              {isEditing ? 'Update Task' : selectedDates.length > 1 ? `Create ${selectedDates.length} Tasks` : 'Create Task'}
             </Button>
           </div>
         </form>

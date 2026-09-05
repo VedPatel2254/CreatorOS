@@ -148,6 +148,89 @@ export function useCreateTask() {
   })
 }
 
+export function useCreateTasks() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async (tasks: Array<{
+      client_id: string
+      work_type_id: string
+      title: string
+      description?: string
+      platform?: string
+      deadline: string
+      is_billable?: boolean
+      billing_quantity?: number
+      effective_unit_price?: number | null
+      billing_notes?: string
+      notes?: string
+    }>) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const firstTask = tasks[0]
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select(`
+          *,
+          client_pricing_rules (
+            *,
+            work_types (id, name)
+          )
+        `)
+        .eq('id', firstTask.client_id)
+        .single()
+
+      const resolvedPrice = firstTask.effective_unit_price ?? resolveExpectedPrice(
+        (clientData as any)?.client_pricing_rules ?? [],
+        firstTask.work_type_id,
+        firstTask.effective_unit_price
+      )
+
+      const rows = tasks.map((t) => ({
+        user_id: user.id,
+        client_id: t.client_id,
+        work_type_id: t.work_type_id,
+        title: t.title,
+        description: t.description ?? '',
+        platform: t.platform ?? '',
+        deadline: t.deadline,
+        status: 'planned' as const,
+        source: 'manual' as const,
+        is_billable: t.is_billable ?? true,
+        billing_quantity: t.billing_quantity ?? 1,
+        effective_unit_price: t.effective_unit_price ?? resolvedPrice,
+        billing_notes: t.billing_notes ?? '',
+        notes: t.notes ?? '',
+      }))
+
+      const { data: created, error } = await supabase
+        .from('tasks')
+        .insert(rows)
+        .select()
+
+      if (error) throw error
+
+      if (created && created.length > 0) {
+        const logEntries = created.map((t) => ({
+          user_id: user.id,
+          entity_type: 'task' as const,
+          entity_id: t.id,
+          action: 'created' as const,
+          new_value: { title: firstTask.title, status: 'planned' },
+        }))
+        await supabase.from('activity_log').insert(logEntries)
+      }
+
+      return created ?? []
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    },
+  })
+}
+
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient()
   const supabase = createClient()
