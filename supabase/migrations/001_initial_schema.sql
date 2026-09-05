@@ -170,7 +170,7 @@ create table if not exists pdf_import_batches (
   original_filename text not null,
   storage_path text,
   extracted_raw jsonb,
-  extraction_method text not null default 'text' check (extraction_method in ('text', 'ocr_unavailable')),
+  extraction_method text not null default 'text',
   extraction_confidence text not null default 'low' check (extraction_confidence in ('high', 'medium', 'low', 'failed')),
   status text not null default 'pending_review' check (status in ('pending_review', 'confirmed', 'discarded')),
   task_count_extracted integer not null default 0,
